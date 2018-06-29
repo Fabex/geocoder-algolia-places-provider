@@ -77,6 +77,11 @@ class AlgoliaPlaces extends AbstractHttpProvider implements Provider
 
     public function geocodeQuery(GeocodeQuery $query): Collection
     {
+        // This API doesn't handle IPs
+        if (filter_var($query->getText(), FILTER_VALIDATE_IP)) {
+            throw new UnsupportedOperation('The AlgoliaPlaces provider does not support IP addresses, only street addresses.');
+        }
+
         $this->query = $query;
         $uri = $this->useSsl ? self::ENDPOINT_URL_SSL : self::ENDPOINT_URL;
 
@@ -91,7 +96,7 @@ class AlgoliaPlaces extends AbstractHttpProvider implements Provider
 
     public function reverseQuery(ReverseQuery $query): Collection
     {
-        throw new UnsupportedOperation('The AlgoliaPlaces provided does not support reverse geocoding.');
+        throw new UnsupportedOperation('The AlgoliaPlaces provider does not support reverse geocoding.');
     }
 
     public function getTypes(): array
@@ -197,13 +202,16 @@ class AlgoliaPlaces extends AbstractHttpProvider implements Provider
     {
         $results = [];
 
+        //error_log(\json_encode($jsonResponse));
+        //degradedQuery
         foreach ($jsonResponse->hits as $result) {
             $builder = new AddressBuilder($this->getName());
             $builder->setCoordinates($result->_geoloc->lat, $result->_geoloc->lng);
             $builder->setCountry($result->country);
             $builder->setCountryCode($result->country_code);
             $builder->setLocality($result->city[0]);
-            $builder->setPostalCode($result->postcode[0]);
+            if(isset($result->postcode))
+                $builder->setPostalCode($result->postcode[0]);
             $builder->setStreetName($result->locale_names[0]);
             foreach ($result->administrative ?? [] as $i => $adminLevel) {
                 $builder->addAdminLevel($i + 1, $adminLevel);
