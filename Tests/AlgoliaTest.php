@@ -109,10 +109,10 @@ class AlgoliaPlacesTest extends BaseTestCase
         $provider->geocodeQuery(GeocodeQuery::create('::1'));
     }
 
-     /**
-     * @expectedException \Geocoder\Exception\UnsupportedOperation
-     * @expectedExceptionMessage The AlgoliaPlaces provider does not support IP addresses, only street addresses.
-     */
+    /**
+    * @expectedException \Geocoder\Exception\UnsupportedOperation
+    * @expectedExceptionMessage The AlgoliaPlaces provider does not support IP addresses, only street addresses.
+    */
     public function testGeocodeWithRealIPv6()
     {
         if (!isset($_SERVER['ALGOLIA_APP_ID']) || !isset($_SERVER['ALGOLIA_API_KEY'])) {

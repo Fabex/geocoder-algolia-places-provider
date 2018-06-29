@@ -210,8 +210,9 @@ class AlgoliaPlaces extends AbstractHttpProvider implements Provider
             $builder->setCountry($result->country);
             $builder->setCountryCode($result->country_code);
             $builder->setLocality($result->city[0]);
-            if(isset($result->postcode))
+            if (isset($result->postcode)) {
                 $builder->setPostalCode($result->postcode[0]);
+            }
             $builder->setStreetName($result->locale_names[0]);
             foreach ($result->administrative ?? [] as $i => $adminLevel) {
                 $builder->addAdminLevel($i + 1, $adminLevel);
