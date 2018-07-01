@@ -17,6 +17,7 @@ use Geocoder\Provider\Provider;
 use Geocoder\Query\GeocodeQuery;
 use Geocoder\Query\ReverseQuery;
 use Http\Client\HttpClient;
+use Psr\Http\Message\RequestInterface;
 
 /**
  * @author Federico Liva <fede91it@gmail.com>
