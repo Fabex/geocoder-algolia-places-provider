@@ -17,6 +17,7 @@ use Geocoder\Provider\Provider;
 use Geocoder\Query\GeocodeQuery;
 use Geocoder\Query\ReverseQuery;
 use Http\Client\HttpClient;
+use Psr\Http\Message\RequestInterface;
 
 /**
  * @author Federico Liva <fede91it@gmail.com>
@@ -77,6 +78,11 @@ class AlgoliaPlaces extends AbstractHttpProvider implements Provider
 
     public function geocodeQuery(GeocodeQuery $query): Collection
     {
+        // This API doesn't handle IPs
+        if (filter_var($query->getText(), FILTER_VALIDATE_IP)) {
+            throw new UnsupportedOperation('The AlgoliaPlaces provider does not support IP addresses, only street addresses.');
+        }
+
         $this->query = $query;
         $uri = $this->useSsl ? self::ENDPOINT_URL_SSL : self::ENDPOINT_URL;
 
@@ -91,7 +97,7 @@ class AlgoliaPlaces extends AbstractHttpProvider implements Provider
 
     public function reverseQuery(ReverseQuery $query): Collection
     {
-        throw new UnsupportedOperation('The AlgoliaPlaces provided does not support reverse geocoding.');
+        throw new UnsupportedOperation('The AlgoliaPlaces provider does not support reverse geocoding.');
     }
 
     public function getTypes(): array
@@ -107,33 +113,26 @@ class AlgoliaPlaces extends AbstractHttpProvider implements Provider
         ];
     }
 
-    protected function getUrlContents(string $url): string
+    /**
+    * @param string $url
+    *
+    * @return RequestInterface
+    */
+    protected function getRequest(string $url): RequestInterface
     {
-        $request = $this->getMessageFactory()->createRequest(
+        return $this->getMessageFactory()->createRequest(
             'POST',
             $url,
             $this->buildHeaders(),
             $this->buildData()
         );
-        $response = $this->getHttpClient()->sendRequest($request);
+    }
 
-        $statusCode = $response->getStatusCode();
-        if (401 === $statusCode || 403 === $statusCode) {
-            throw new InvalidCredentials();
-        }
-        if (429 === $statusCode) {
-            throw new QuotaExceeded();
-        }
-        if ($statusCode >= 300) {
-            throw InvalidServerResponse::create($url, $statusCode);
-        }
+    protected function getUrlContents(string $url): string
+    {
+        $request = $this->getRequest($url);
 
-        $body = (string)$response->getBody();
-        if (empty($body)) {
-            throw InvalidServerResponse::emptyResponse($url);
-        }
-
-        return $body;
+        return $this->getParsedResponse($request);
     }
 
     private function buildData(): string
@@ -197,13 +196,17 @@ class AlgoliaPlaces extends AbstractHttpProvider implements Provider
     {
         $results = [];
 
+        //error_log(\json_encode($jsonResponse));
+        //degradedQuery
         foreach ($jsonResponse->hits as $result) {
             $builder = new AddressBuilder($this->getName());
             $builder->setCoordinates($result->_geoloc->lat, $result->_geoloc->lng);
             $builder->setCountry($result->country);
             $builder->setCountryCode($result->country_code);
             $builder->setLocality($result->city[0]);
-            $builder->setPostalCode($result->postcode[0]);
+            if (isset($result->postcode)) {
+                $builder->setPostalCode($result->postcode[0]);
+            }
             $builder->setStreetName($result->locale_names[0]);
             foreach ($result->administrative ?? [] as $i => $adminLevel) {
                 $builder->addAdminLevel($i + 1, $adminLevel);
