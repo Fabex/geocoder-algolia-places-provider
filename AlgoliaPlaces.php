@@ -112,33 +112,26 @@ class AlgoliaPlaces extends AbstractHttpProvider implements Provider
         ];
     }
 
-    protected function getUrlContents(string $url): string
+    /**
+    * @param string $url
+    *
+    * @return RequestInterface
+    */
+    protected function getRequest(string $url): RequestInterface
     {
-        $request = $this->getMessageFactory()->createRequest(
+        return $this->getMessageFactory()->createRequest(
             'POST',
             $url,
             $this->buildHeaders(),
             $this->buildData()
         );
-        $response = $this->getHttpClient()->sendRequest($request);
+    }
 
-        $statusCode = $response->getStatusCode();
-        if (401 === $statusCode || 403 === $statusCode) {
-            throw new InvalidCredentials();
-        }
-        if (429 === $statusCode) {
-            throw new QuotaExceeded();
-        }
-        if ($statusCode >= 300) {
-            throw InvalidServerResponse::create($url, $statusCode);
-        }
+    protected function getUrlContents(string $url): string
+    {
+        $request = $this->getRequest($url);
 
-        $body = (string)$response->getBody();
-        if (empty($body)) {
-            throw InvalidServerResponse::emptyResponse($url);
-        }
-
-        return $body;
+        return $this->getParsedResponse($request);
     }
 
     private function buildData(): string
